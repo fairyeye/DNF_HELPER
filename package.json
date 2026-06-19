@@ -1,0 +1,52 @@
+{
+  "name": "dnf-gui",
+  "version": "1.0.0",
+  "description": "DNF 活动助手 - 图形界面版",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --config"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.1.0",
+    "@puppeteer/browsers": "^2.6.0"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.dnf.gui",
+    "productName": "DNF活动助手",
+    "copyright": "Copyright © 2026",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": null
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerLanguages": ["zh_CN"],
+      "language": "2052",
+      "shortcutName": "DNF活动助手"
+    },
+    "asar": false,
+    "files": [
+      "main.js",
+      "index.html",
+      "bot_core.mjs",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../dnf_bot_stronger/events",
+        "to": "events"
+      }
+    ]
+  }
+}

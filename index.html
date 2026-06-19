@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DNF 活动助手</title>
+  <style>
+    /* ==================== Reset & Base ==================== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #0d0d1a;
+      --surface:   #161628;
+      --card:      #1c1c36;
+      --border:    #2a2a4a;
+      --accent:    #5b6cf7;
+      --accent-h:  #4f5de6;
+      --success:   #22c55e;
+      --danger:    #ef4444;
+      --warn:      #f59e0b;
+      --text:      #e4e4f0;
+      --text2:     #8888aa;
+      --radius:    10px;
+    }
+
+    body {
+      font-family: 'Microsoft YaHei', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ==================== Scrollbar ==================== */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ==================== Header ==================== */
+    header {
+      display: flex;
+      align-items: center;
+      padding: 18px 24px;
+      background: linear-gradient(135deg, #12122a 0%, #1e1e42 100%);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    header .logo {
+      font-size: 20px;
+      font-weight: 700;
+      background: linear-gradient(90deg, #7b8aff, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      flex: 1;
+    }
+    header .actions { display: flex; gap: 10px; align-items: center; }
+
+    /* ==================== Login Status ==================== */
+    .login-badge {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+      margin-right: 4px;
+    }
+    .login-badge.on  { background: rgba(34,197,94,0.15); color: var(--success); }
+    .login-badge.off { background: rgba(239,68,68,0.12); color: var(--danger); }
+
+    /* ==================== Buttons ==================== */
+    .btn {
+      padding: 7px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn:hover { filter: brightness(1.15); }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; filter: none; transform: none; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-danger  { background: var(--danger);  color: #fff; }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    /* ==================== Event List ==================== */
+    #events {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 14px;
+      align-content: start;
+    }
+
+    .event-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: border-color 0.2s;
+    }
+    .event-card:hover { border-color: var(--accent); }
+    .event-card.expired { opacity: 0.5; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .card-title { font-size: 16px; font-weight: 600; }
+    .badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-active  { background: rgba(34,197,94,0.15); color: var(--success); }
+    .badge-expired { background: rgba(239,68,68,0.15); color: var(--danger); }
+
+    .card-meta {
+      font-size: 12px;
+      color: var(--text2);
+      margin-bottom: 14px;
+      line-height: 1.7;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ==================== Empty State ==================== */
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text2);
+    }
+    .empty p { margin-top: 8px; font-size: 14px; }
+    .empty .icon { font-size: 48px; margin-bottom: 12px; }
+
+    /* ==================== Log Panel ==================== */
+    #log-panel {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      transition: height 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      height: 40px;
+    }
+    #log-panel.expanded { height: 280px; }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 24px;
+      cursor: pointer;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .log-header:hover { background: rgba(255,255,255,0.02); }
+    .log-header .title { font-size: 13px; color: var(--text2); font-weight: 500; }
+    .log-header .clear-btn {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text2);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px 6px;
+    }
+    .log-header .clear-btn:hover { color: var(--danger); }
+    .log-header .toggle { color: var(--text2); font-size: 12px; }
+
+    .log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 24px 10px;
+      font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #aaa;
+    }
+    .log-line { padding: 1px 0; }
+    .log-line.ok  { color: var(--success); }
+    .log-line.err { color: var(--danger); }
+    .log-line.warn { color: var(--warn); }
+
+    /* ==================== Modal ==================== */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.show { display: flex; }
+
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 32px;
+      min-width: 360px;
+      text-align: center;
+    }
+    .modal h3 { margin-bottom: 12px; font-size: 17px; }
+    .modal p { font-size: 13px; color: var(--text2); line-height: 1.6; }
+    .modal .actions { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+
+    /* ==================== Loading Overlay ==================== */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 300;
+      transition: opacity 0.3s;
+    }
+    #loading.hide { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 36px; height: 36px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { margin-top: 14px; color: var(--text2); font-size: 14px; }
+
+    /* ==================== Animations ==================== */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .event-card { animation: fadeIn 0.25s ease; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="logo">DNF 活动助手</div>
+    <div class="actions">
+      <span class="login-badge off" id="login-status">未登录</span>
+      <button class="btn btn-outline btn-sm" onclick="openEventsDir()" title="打开活动配置目录">目录</button>
+      <button class="btn btn-outline btn-sm" onclick="addEvent()">+ 添加活动</button>
+      <button class="btn btn-success btn-sm" id="btn-login" onclick="doLogin()">QQ 登录</button>
+      <button class="btn btn-primary" id="btn-run-all" onclick="runAll()">一键运行全部</button>
+    </div>
+  </header>
+
+  <!-- Event Cards -->
+  <div id="events"></div>
+
+  <!-- Log Panel -->
+  <div id="log-panel" class="expanded">
+    <div class="log-header" onclick="toggleLog()">
+      <span class="toggle" id="log-toggle">&#9660;</span>
+      <span class="title">运行日志</span>
+      <button class="clear-btn" onclick="clearLog(event)">清空</button>
+    </div>
+    <div class="log-body" id="log-body"></div>
+  </div>
+
+  <!-- Login Modal -->
+  <div class="modal-overlay" id="login-modal">
+    <div class="modal">
+      <h3>QQ 扫码登录</h3>
+      <p>已打开浏览器窗口，请在其中完成 QQ 扫码登录。<br>登录成功后窗口会自动关闭。</p>
+      <div class="actions">
+        <button class="btn btn-outline" onclick="closeLoginModal()">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <p>正在初始化引擎...</p>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+
+    // ==================== State ====================
+    let isRunning = false;
+    let events = [];
+
+    // ==================== Init ====================
+    window.addEventListener('DOMContentLoaded', () => {
+      // 等待引擎加载完成后再初始化
+      ipcRenderer.on('engine-ready', (_e, info) => {
+        if (info.error) {
+          addLog('引擎加载失败: ' + info.error, 'err');
+        }
+        refreshEvents();
+        checkLogin();
+      });
+      // 接收引擎日志
+      ipcRenderer.on('bot-log', (_e, msg) => addLog(msg));
+    });
+
+    // ==================== Login Status ====================
+    async function checkLogin() {
+      const res = await ipcRenderer.invoke('check-login');
+      const el = document.getElementById('login-status');
+      if (res.loggedIn) {
+        el.textContent = '已登录';
+        el.className = 'login-badge on';
+      } else {
+        el.textContent = '未登录';
+        el.className = 'login-badge off';
+      }
+    }
+
+    // ==================== Events ====================
+    async function refreshEvents() {
+      try {
+        events = await ipcRenderer.invoke('list-events');
+        renderEvents();
+      } catch (err) {
+        addLog('加载活动列表失败: ' + err.message, 'err');
+      }
+      hideLoading();
+    }
+
+    function renderEvents() {
+      const box = document.getElementById('events');
+
+      if (events.length === 0) {
+        box.innerHTML = `
+          <div class="empty">
+            <div class="icon">📭</div>
+            <p>暂无活动配置</p>
+            <p style="font-size:12px;margin-top:4px">点击 "添加活动" 导入 JSON 配置文件</p>
+          </div>`;
+        return;
+      }
+
+      box.innerHTML = events.map(evt => {
+        const dCount = (evt.dailyTasks || []).length;
+        const wCount = (evt.weeklyTasks || []).length;
+        const dPts = taskPoints(evt.dailyTasks);
+        const wPts = taskPoints(evt.weeklyTasks);
+        const reward = rewardText(evt.targetReward);
+        const statusBadge = evt._active
+          ? `<span class="badge badge-active">进行中 · ${evt._daysLeft}天</span>`
+          : `<span class="badge badge-expired">已过期</span>`;
+
+        return `
+          <div class="event-card ${evt._active ? '' : 'expired'}" id="card-${esc(evt.id)}">
+            <div class="card-header">
+              <span class="card-title">${esc(evt.name)}</span>
+              ${statusBadge}
+            </div>
+            <div class="card-meta">
+              活动期 ${evt.startDate} ~ ${evt.endDate}<br>
+              每日任务 ${dCount} 个 (${dPts}分/天) · 每周任务 ${wCount} 个 (${wPts}分/周)<br>
+              ${reward ? '目标奖励: ' + esc(reward) : ''}
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-primary btn-sm"
+                onclick="runSingle('${esc(evt.id)}')"
+                ${!evt._active || isRunning ? 'disabled' : ''}>运行</button>
+              <button class="btn btn-outline btn-sm"
+                onclick="queryStatus('${esc(evt.id)}')"
+                ${!evt._active || isRunning ? 'disabled' : ''}>积分</button>
+              <button class="btn btn-outline btn-sm"
+                onclick="removeEvent('${esc(evt.id)}')"
+                ${isRunning ? 'disabled' : ''}>删除</button>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    // ==================== Actions ====================
+    async function runSingle(eventId) {
+      setRunning(true);
+      addLog('════════ 开始运行 ════════');
+      const res = await ipcRenderer.invoke('run-event', eventId);
+      showRunResult(res);
+      addLog('════════ 运行结束 ════════');
+      setRunning(false);
+    }
+
+    async function runAll() {
+      setRunning(true);
+      addLog('════════ 一键运行全部活动 ════════');
+      const res = await ipcRenderer.invoke('run-all');
+      if (res.error) {
+        addLog('错误: ' + res.error, 'err');
+      } else if (res.results) {
+        for (const [id, r] of Object.entries(res.results)) {
+          showRunResult({ result: r });
+        }
+      }
+      addLog('════════ 全部完成 ════════');
+      setRunning(false);
+    }
+
+    function showRunResult(res) {
+      if (res.error) {
+        addLog('执行失败: ' + res.error, 'err');
+        return;
+      }
+      const r = res.result;
+      if (!r) {
+        addLog('未获取到执行结果', 'warn');
+        return;
+      }
+      if (r.error) {
+        addLog('执行出错: ' + r.error, 'err');
+      }
+      if (r.daily) {
+        const d = r.daily;
+        addLog(`  每日任务: 成功${d.success} 跳过${d.skip} 失败${d.fail}`,
+          d.fail > 0 ? 'warn' : 'ok');
+      }
+      if (r.weekly) {
+        const w = r.weekly;
+        addLog(`  每周任务: 成功${w.success} 跳过${w.skip} 失败${w.fail}`,
+          w.fail > 0 ? 'warn' : 'ok');
+      }
+      if (r.score !== undefined) {
+        addLog(`  当前积分: ${r.score}`, 'ok');
+      }
+      if (r.exchanged) {
+        addLog('  奖励已兑换!', 'ok');
+      }
+    }
+
+    async function doLogin() {
+      if (events.length === 0) {
+        addLog('请先添加一个活动配置', 'warn');
+        return;
+      }
+      const active = events.find(e => e._active);
+      const url = (active || events[0]).url;
+
+      showLoginModal();
+      addLog('正在打开浏览器进行 QQ 登录...');
+      const res = await ipcRenderer.invoke('login', url);
+      closeLoginModal();
+
+      if (res.error) {
+        addLog('登录失败: ' + res.error, 'err');
+      } else {
+        addLog('QQ 登录成功! 登录状态已保存', 'ok');
+      }
+      // 登录完成后刷新登录状态
+      await checkLogin();
+    }
+
+    async function queryStatus(eventId) {
+      setRunning(true);
+      const evt = events.find(e => e.id === eventId);
+      addLog(`── 查询 ${evt ? evt.name : eventId} 积分 ──`);
+
+      const res = await ipcRenderer.invoke('status', eventId);
+
+      if (res.error) {
+        addLog('查询失败: ' + res.error, 'err');
+      } else if (res.result) {
+        const r = res.result;
+        if (r.error) {
+          addLog('查询异常: ' + r.error, 'err');
+        } else if (r.loggedIn === false) {
+          addLog('未登录，请先点击 QQ 登录', 'warn');
+        } else if (r.score !== undefined) {
+          addLog(`当前积分: ${r.score}`, 'ok');
+          if (r.predictionScore !== undefined) {
+            addLog(`预测积分: ${r.predictionScore}`, 'ok');
+          }
+          if (r.target) {
+            const diff = Math.max(0, r.target.cost - r.score);
+            addLog(`目标 ${r.target.name}(${r.target.cost}分) ${diff > 0 ? '还差 ' + diff + ' 分' : '已达成!'}`,
+              diff > 0 ? 'warn' : 'ok');
+          }
+        }
+      }
+
+      setRunning(false);
+    }
+
+    async function addEvent() {
+      const res = await ipcRenderer.invoke('add-event');
+      if (res.canceled) return;
+      if (res.error) {
+        addLog(res.error, 'err');
+        return;
+      }
+      addLog('已添加活动: ' + res.event.name, 'ok');
+      refreshEvents();
+    }
+
+    async function removeEvent(eventId) {
+      const evt = events.find(e => e.id === eventId);
+      if (!evt) return;
+      if (!confirm('确定删除活动 "' + evt.name + '" ?')) return;
+      const res = await ipcRenderer.invoke('remove-event', eventId);
+      if (res.error) {
+        addLog('删除失败: ' + res.error, 'err');
+      } else {
+        addLog('已删除: ' + evt.name, 'ok');
+        refreshEvents();
+      }
+    }
+
+    function openEventsDir() {
+      ipcRenderer.invoke('open-events-dir');
+    }
+
+    // ==================== UI Helpers ====================
+    function setRunning(val) {
+      isRunning = val;
+      document.querySelectorAll('.btn').forEach(b => {
+        if (b.id === 'btn-login' || b.id === 'btn-run-all') b.disabled = val;
+      });
+      renderEvents();
+    }
+
+    function hideLoading() {
+      const el = document.getElementById('loading');
+      if (!el) return;
+      el.classList.add('hide');
+      setTimeout(() => el.remove(), 400);
+    }
+
+    function showLoginModal() {
+      document.getElementById('login-modal').classList.add('show');
+    }
+    function closeLoginModal() {
+      document.getElementById('login-modal').classList.remove('show');
+    }
+
+    function toggleLog() {
+      const panel = document.getElementById('log-panel');
+      const toggle = document.getElementById('log-toggle');
+      panel.classList.toggle('expanded');
+      toggle.innerHTML = panel.classList.contains('expanded') ? '&#9660;' : '&#9650;';
+    }
+
+    // ==================== Log ====================
+    function addLog(msg, cls) {
+      const body = document.getElementById('log-body');
+      const line = document.createElement('div');
+      line.className = 'log-line';
+
+      if (cls) {
+        line.classList.add(cls);
+      } else {
+        const m = msg.toLowerCase();
+        if (m.includes('成功') || m.includes('✓') || m.includes('已保存') || m.includes('完成')) line.classList.add('ok');
+        else if (m.includes('失败') || m.includes('错误') || m.includes('异常') || m.includes('失效')) line.classList.add('err');
+        else if (m.includes('等待') || m.includes('超时') || m.includes('不足') || m.includes('跳过')) line.classList.add('warn');
+      }
+
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      line.textContent = `[${time}] ${msg}`;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+
+      // 自动展开日志面板
+      const panel = document.getElementById('log-panel');
+      if (!panel.classList.contains('expanded')) {
+        panel.classList.add('expanded');
+        document.getElementById('log-toggle').innerHTML = '&#9660;';
+      }
+    }
+
+    function clearLog(e) {
+      e.stopPropagation();
+      document.getElementById('log-body').innerHTML = '';
+    }
+
+    // ==================== Util ====================
+    function esc(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function rewardText(r) {
+      if (!r) return '';
+      if (typeof r === 'string') return r;
+      return r.name || r.id || JSON.stringify(r);
+    }
+
+    function taskPoints(tasks) {
+      return (tasks || []).reduce((s, t) => s + (t.points || 0), 0);
+    }
+  </script>
+</body>
+</html>
