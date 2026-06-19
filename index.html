@@ -367,12 +367,18 @@
       box.innerHTML = events.map(evt => {
         const dCount = (evt.dailyTasks || []).length;
         const wCount = (evt.weeklyTasks || []).length;
+        const oCount = (evt.oneTimeTasks || []).length;
         const dPts = taskPoints(evt.dailyTasks);
         const wPts = taskPoints(evt.weeklyTasks);
+        const oPts = taskPoints(evt.oneTimeTasks);
         const reward = rewardText(evt.targetReward);
         const statusBadge = evt._active
           ? `<span class="badge badge-active">进行中 · ${evt._daysLeft}天</span>`
           : `<span class="badge badge-expired">已过期</span>`;
+
+        let taskInfo = `每日任务 ${dCount} 个 (${dPts}分/天)`;
+        if (wCount > 0) taskInfo += ` · 每周任务 ${wCount} 个 (${wPts}分/周)`;
+        if (oCount > 0) taskInfo += ` · 一次性任务 ${oCount} 个 (${oPts}分)`;
 
         return `
           <div class="event-card ${evt._active ? '' : 'expired'}" id="card-${esc(evt.id)}">
@@ -382,7 +388,7 @@
             </div>
             <div class="card-meta">
               活动期 ${evt.startDate} ~ ${evt.endDate}<br>
-              每日任务 ${dCount} 个 (${dPts}分/天) · 每周任务 ${wCount} 个 (${wPts}分/周)<br>
+              ${taskInfo}<br>
               ${reward ? '目标奖励: ' + esc(reward) : ''}
             </div>
             <div class="card-actions">
@@ -447,6 +453,11 @@
         const w = r.weekly;
         addLog(`  每周任务: 成功${w.success} 跳过${w.skip} 失败${w.fail}`,
           w.fail > 0 ? 'warn' : 'ok');
+      }
+      if (r.oneTime) {
+        const o = r.oneTime;
+        addLog(`  一次性任务: 成功${o.success} 跳过${o.skip} 失败${o.fail}`,
+          o.fail > 0 ? 'warn' : 'ok');
       }
       if (r.score !== undefined) {
         addLog(`  当前积分: ${r.score}`, 'ok');

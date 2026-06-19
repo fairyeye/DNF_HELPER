@@ -133,6 +133,12 @@ function listEvents() {
     });
 }
 
+function routeClaim(config) {
+  if (!engine) return Promise.reject(new Error('引擎未加载'));
+  if (config.framework === 'milo') return engine.runClaimMilo(config);
+  return engine.runClaim(config);
+}
+
 // ================================================================
 //                        IPC 处理器
 // ================================================================
@@ -149,7 +155,7 @@ function setupIPC() {
     const config = events.find(e => e.id === eventId);
     if (!config) return { error: '找不到活动: ' + eventId };
     try {
-      const result = await engine.runClaim(config);
+      const result = await routeClaim(config);
       return { success: true, result };
     } catch (err) {
       return { error: err.message };
@@ -164,7 +170,7 @@ function setupIPC() {
     const results = {};
     for (const config of active) {
       try {
-        results[config.id] = await engine.runClaim(config);
+        results[config.id] = await routeClaim(config);
       } catch (err) {
         results[config.id] = { error: err.message };
       }
