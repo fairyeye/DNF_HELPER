@@ -7,7 +7,7 @@ set "ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/"
 set "ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/"
 
 echo ========================================
-echo   DNF 活动助手 - 构建工具
+echo   TX 游戏活动助手 - 构建工具
 echo ========================================
 echo.
 

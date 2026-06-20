@@ -1,6 +1,6 @@
-# DNF 活动助手
+# TX 游戏活动助手
 
-自动领取 DNF（地下城与勇士）限时活动积分的桌面工具，基于 Electron + Puppeteer 实现。
+自动领取腾讯游戏限时活动积分的桌面工具，基于 Electron + Puppeteer 实现。
 
 ## 功能
 
@@ -17,7 +17,7 @@
 
 ### 安装
 
-运行安装包 `DNF活动助手 Setup 1.0.0.exe`，选择安装目录后完成安装。
+运行安装包 `TX游戏活动助手 Setup 1.0.0.exe`，选择安装目录后完成安装。
 
 ### 登录
 
@@ -192,7 +192,7 @@ set ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-buil
 npx electron-builder --win --config
 ```
 
-产出文件在 `dist/DNF活动助手 Setup 1.0.0.exe`。
+产出文件在 `dist/TX游戏活动助手 Setup 1.0.0.exe`。
 
 ### 技术栈
 
