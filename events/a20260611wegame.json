@@ -1,0 +1,34 @@
+{
+  "id": "a20260611wegame",
+  "name": "DNF18年周年庆 WEGAME好礼相伴",
+  "url": "https://dnf.qq.com/cp/a20260611wegame/index.html",
+  "startDate": "2026-06-11",
+  "endDate": "2026-07-08",
+  "framework": "milo",
+  "actId": "934264",
+  "bindToken": "bcc43f",
+  "queryBindToken": "5730fc",
+  "initToken": "341da8",
+  "dailyLotteryToken": "0e0917",
+  "giftTasks": [
+    { "token": "5debc4", "name": "周年庆典全民礼包", "points": 0 },
+    { "token": "9a7fd3", "name": "回流礼包", "points": 0 }
+  ],
+  "dailyTasks": [
+    { "token": "a60b52", "name": "每日通关深渊8次 (+1积分)", "points": 1 }
+  ],
+  "weeklyTasks": [
+    { "token": "542a3b", "name": "每周通关1次末世录军团本 (+3积分)", "points": 3 }
+  ],
+  "oneTimeTasks": [
+    { "token": "909647", "name": "创建新职业破浪者 (+3积分)", "points": 3 },
+    { "token": "a64502", "name": "创建新职业蓝拳使者女 (+3积分)", "points": 3 }
+  ],
+  "exchangeToken": "49bfda",
+  "targetReward": {
+    "id": 1,
+    "name": "+10装备增幅券",
+    "cost": 43,
+    "exchangeIndex": 1
+  }
+}

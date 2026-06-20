@@ -1,0 +1,19 @@
+{
+  "id": "celebration",
+  "name": "DNF18周年庆典 - 打卡活跃挑战",
+  "url": "https://dnf.qq.com/cp/celebration/",
+  "startDate": "2026-06-11",
+  "endDate": "2026-07-08",
+  "framework": "act",
+  "type": "checkin",
+  "checkInToken": "81876f",
+  "checkInGiftToken": "fb7fef",
+  "milestones": [
+    { "index": 0, "days": 3, "name": "3天活跃奖励" },
+    { "index": 1, "days": 7, "name": "7天活跃奖励" },
+    { "index": 2, "days": 10, "name": "10天活跃奖励" },
+    { "index": 3, "days": 14, "name": "14天活跃奖励" },
+    { "index": 4, "days": 21, "name": "21天活跃奖励" },
+    { "index": 5, "days": 25, "name": "25天活跃奖励" }
+  ]
+}

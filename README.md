@@ -156,18 +156,15 @@
 dnf_gui/
 ├── main.js          # Electron 主进程（IPC 通信、引擎加载）
 ├── index.html       # 渲染进程（界面、交互逻辑）
-├── package.json     # 依赖配置 + electron-builder 打包配置
-├── build.bat        # 构建脚本（复制引擎 + 打包 EXE）
-├── AGENTS.md        # GUI 开发规范
-└── README.md
-
-dnf_bot_stronger/
 ├── bot_core.mjs     # 核心引擎（Puppeteer 自动化、登录检测、任务领取）
 ├── events/          # 活动配置 JSON 文件
 │   ├── a20260611stronger.json   # ACT 框架示例
 │   ├── a20260611wegame.json     # Milo 框架示例
 │   └── celebration.json         # 打卡签到示例
-└── AGENTS.md        # 引擎开发规范
+├── package.json     # 依赖配置 + electron-builder 打包配置
+├── build.bat        # 构建脚本
+├── AGENTS.md        # 开发规范
+└── README.md
 ```
 
 ## 开发
@@ -181,20 +178,17 @@ dnf_bot_stronger/
 
 ```bash
 cd dnf_gui
-# 复制引擎文件
-cp ../dnf_bot_stronger/bot_core.mjs .
-# 启动开发模式
+npm install
 npx electron .
 ```
 
 ### 打包 EXE
 
+双击 `build.bat` 或手动执行：
+
 ```bash
-# 设置中国镜像
 set ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/
 set ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/
-# 复制引擎并打包
-cp ../dnf_bot_stronger/bot_core.mjs .
 npx electron-builder --win --config
 ```
 

@@ -38,15 +38,9 @@ function createWindow() {
 // ================================================================
 
 function getEnginePath() {
-  // 1. 打包后: resources/app/main.js + resources/app/bot_core.mjs（构建时复制）
   const appPath = path.join(__dirname, 'bot_core.mjs');
   if (fs.existsSync(appPath)) {
     return 'file:///' + appPath.replace(/\\/g, '/');
-  }
-  // 2. 开发时: dnf_gui/main.js → ../dnf_bot_stronger/bot_core.mjs
-  const devPath = path.resolve(__dirname, '..', 'dnf_bot_stronger', 'bot_core.mjs');
-  if (fs.existsSync(devPath)) {
-    return 'file:///' + devPath.replace(/\\/g, '/');
   }
   return null;
 }
@@ -70,7 +64,7 @@ function copyResourceEvents() {
 async function initEngine() {
   const enginePath = getEnginePath();
   if (!enginePath) {
-    console.error('找不到 bot_core.mjs，请确保 dnf_bot_stronger 目录存在');
+    console.error('找不到 bot_core.mjs');
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('engine-ready', { error: '找不到引擎文件' });
     }

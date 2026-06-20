@@ -1,0 +1,28 @@
+{
+  "id": "a20260611stronger",
+  "name": "强者之路竞技赛",
+  "url": "https://dnf.qq.com/cp/a20260611stronger/index.html",
+  "startDate": "2026-06-18",
+  "endDate": "2026-07-09",
+  "dailyTasks": [
+    { "token": "2598fc", "name": "登录一次游戏", "points": 10 },
+    { "token": "463869", "name": "在线时长30分钟", "points": 10 },
+    { "token": "0fefc6", "name": "消耗50疲劳值", "points": 10 },
+    { "token": "d44452", "name": "完成1次强者之路", "points": 10 },
+    { "token": "92551d", "name": "完成3次强者之路", "points": 10 }
+  ],
+  "weeklyTasks": [
+    { "token": "48199f", "name": "通关深渊", "points": 20 },
+    { "token": "3f4ac9", "name": "狄瑞吉攻坚战(噩梦)", "points": 20 },
+    { "token": "bf5508", "name": "军团本美神维纳斯", "points": 20 },
+    { "token": "7d9b29", "name": "强者之路获胜1场", "points": 20 },
+    { "token": "e9758e", "name": "强者之路获胜3场", "points": 20 }
+  ],
+  "refreshToken": "9796c4",
+  "exchangeToken": "0464c4",
+  "targetReward": {
+    "id": 12,
+    "name": "+10 装备增幅券",
+    "cost": 600
+  }
+}

@@ -44,7 +44,7 @@
     ],
     "extraResources": [
       {
-        "from": "../dnf_bot_stronger/events",
+        "from": "events",
         "to": "events"
       }
     ]
