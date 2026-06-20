@@ -135,6 +135,7 @@ function listEvents() {
 
 function routeClaim(config) {
   if (!engine) return Promise.reject(new Error('引擎未加载'));
+  if (config.type === 'checkin') return engine.runCheckInClaim(config);
   if (config.framework === 'milo') return engine.runClaimMilo(config);
   return engine.runClaim(config);
 }
@@ -179,29 +180,79 @@ function setupIPC() {
   });
 
   // ---------- 登录 ----------
-  ipcMain.handle('login', async (_e, url) => {
+  ipcMain.handle('login', async (_e, url, additionalUrls, framework) => {
     if (!engine) return { error: '引擎未加载' };
     try {
-      await engine.runLogin(url);
+      await engine.runLogin(url, additionalUrls || [], framework || 'act');
       return { success: true };
     } catch (err) {
       return { error: err.message };
     }
   });
 
-  // ---------- 检查登录状态（本地 Cookie 文件） ----------
-  ipcMain.handle('check-login', () => {
+  // ---------- 检查登录状态（按框架检查 Cookie 文件 + Chrome Profile） ----------
+  // 辅助函数：验证 Cookie 数组是否包含有效 QQ 认证信息
+  function hasValidQQAuth(cookies) {
+    if (!Array.isArray(cookies) || cookies.length === 0) return false;
+    // 方式1：传统 QQ 登录 — uin + skey
+    const hasUin = cookies.some(c => c.name === 'uin' && c.value && c.value !== 'undefined');
+    const hasSkey = cookies.some(c => c.name === 'skey' && c.value && c.value !== 'undefined');
+    if (hasUin && hasSkey) return true;
+    // 方式2：ACT OAuth2 登录 — openid + access_token
+    const hasOpenid = cookies.some(c => c.name === 'openid' && c.value && c.value !== 'undefined' && c.value !== '');
+    const hasAccessToken = cookies.some(c => c.name === 'access_token' && c.value && c.value !== 'undefined' && c.value !== '');
+    if (hasOpenid && hasAccessToken) return true;
+    // 方式3：备选 — p_skey + pt4_token
+    const hasPSkey = cookies.some(c => c.name === 'p_skey' && c.value && c.value !== 'undefined');
+    const hasPt4 = cookies.some(c => c.name === 'pt4_token' && c.value && c.value !== 'undefined');
+    return hasPSkey && hasPt4;
+  }
+
+  // ---------- 检查单个框架的登录状态 ----------
+  ipcMain.handle('check-login', (_e, framework) => {
     if (!engine) return { loggedIn: false };
-    const cookiesFile = path.join(engine.DATA_DIR, 'cookies.json');
+    const fw = framework || 'act';
+    const cookiesFile = path.join(engine.DATA_DIR, `cookies.${fw}.json`);
     if (fs.existsSync(cookiesFile)) {
       try {
         const data = JSON.parse(fs.readFileSync(cookiesFile, 'utf-8'));
-        return { loggedIn: Array.isArray(data) && data.length > 0 };
-      } catch {
-        return { loggedIn: false };
-      }
+        if (hasValidQQAuth(data)) {
+          const validCount = data.filter(c => c && c.value && c.value !== 'undefined' && c.value !== 'null').length;
+          return { loggedIn: true, cookieCount: validCount, framework: fw };
+        }
+      } catch { /* continue */ }
     }
-    return { loggedIn: false };
+    return { loggedIn: false, framework: fw };
+  });
+
+  // ---------- 批量检查所有框架的登录状态 ----------
+  ipcMain.handle('check-all-logins', (_e, frameworks) => {
+    if (!engine) return {};
+    const results = {};
+    const fws = frameworks || ['act', 'milo'];
+    for (const fw of fws) {
+      const cookiesFile = path.join(engine.DATA_DIR, `cookies.${fw}.json`);
+      let loggedIn = false;
+      if (fs.existsSync(cookiesFile)) {
+        try {
+          const data = JSON.parse(fs.readFileSync(cookiesFile, 'utf-8'));
+          if (hasValidQQAuth(data)) loggedIn = true;
+        } catch { /* continue */ }
+      }
+      results[fw] = loggedIn;
+    }
+    return results;
+  });
+
+  // ---------- 清空登录信息 ----------
+  ipcMain.handle('clear-login', () => {
+    if (!engine) return { error: '引擎未加载' };
+    try {
+      const result = engine.clearLoginState();
+      return { success: true, cleared: result.cleared };
+    } catch (err) {
+      return { error: err.message };
+    }
   });
 
   // ---------- 查询积分 ----------

@@ -272,6 +272,7 @@
       <button class="btn btn-outline btn-sm" onclick="openEventsDir()" title="打开活动配置目录">目录</button>
       <button class="btn btn-outline btn-sm" onclick="addEvent()">+ 添加活动</button>
       <button class="btn btn-success btn-sm" id="btn-login" onclick="doLogin()">QQ 登录</button>
+      <button class="btn btn-outline btn-sm" id="btn-logout" onclick="clearLogin()" title="清空登录信息（Cookie + 浏览器缓存）">清空登录</button>
       <button class="btn btn-primary" id="btn-run-all" onclick="runAll()">一键运行全部</button>
     </div>
   </header>
@@ -293,10 +294,7 @@
   <div class="modal-overlay" id="login-modal">
     <div class="modal">
       <h3>QQ 扫码登录</h3>
-      <p>已打开浏览器窗口，请在其中完成 QQ 扫码登录。<br>登录成功后窗口会自动关闭。</p>
-      <div class="actions">
-        <button class="btn btn-outline" onclick="closeLoginModal()">关闭</button>
-      </div>
+      <p>已打开浏览器窗口，请在其中完成 QQ 扫码登录。<br>登录成功后窗口将自动关闭。</p>
     </div>
   </div>
 
@@ -329,10 +327,18 @@
 
     // ==================== Login Status ====================
     async function checkLogin() {
-      const res = await ipcRenderer.invoke('check-login');
+      // 收集当前活动涉及的框架类型
+      const frameworks = [...new Set(events.map(e =>
+        e.framework === 'milo' || e.type === 'checkin' ? 'milo' : 'act'
+      ))];
+      if (frameworks.length === 0) frameworks.push('act', 'milo');
+
+      const res = await ipcRenderer.invoke('check-all-logins', frameworks);
       const el = document.getElementById('login-status');
-      if (res.loggedIn) {
-        el.textContent = '已登录';
+      const loggedInAny = Object.values(res).some(v => v);
+      if (loggedInAny) {
+        const parts = Object.entries(res).filter(([,v]) => v).map(([k]) => k === 'milo' ? 'Milo' : 'ACT');
+        el.textContent = '已登录(' + parts.join('/') + ')';
         el.className = 'login-badge on';
       } else {
         el.textContent = '未登录';
@@ -376,9 +382,25 @@
           ? `<span class="badge badge-active">进行中 · ${evt._daysLeft}天</span>`
           : `<span class="badge badge-expired">已过期</span>`;
 
-        let taskInfo = `每日任务 ${dCount} 个 (${dPts}分/天)`;
-        if (wCount > 0) taskInfo += ` · 每周任务 ${wCount} 个 (${wPts}分/周)`;
-        if (oCount > 0) taskInfo += ` · 一次性任务 ${oCount} 个 (${oPts}分)`;
+        let taskInfo;
+        if (evt.type === 'checkin') {
+          const ms = (evt.milestones || []).map(m => m.days + '天').join(' / ');
+          taskInfo = evt._checkInDays !== undefined
+            ? `已打卡 ${evt._checkInDays} 天 · 里程碑: ${ms}`
+            : `打卡里程碑: ${ms}`;
+        } else {
+          taskInfo = `每日任务 ${dCount} 个 (${dPts}分/天)`;
+          if (wCount > 0) taskInfo += ` · 每周任务 ${wCount} 个 (${wPts}分/周)`;
+          if (oCount > 0) taskInfo += ` · 一次性任务 ${oCount} 个 (${oPts}分)`;
+        }
+
+        const statusBtn = evt.type === 'checkin'
+          ? `<button class="btn btn-outline btn-sm"
+                onclick="queryStatus('${esc(evt.id)}')"
+                ${!evt._active || isRunning ? 'disabled' : ''}>天数</button>`
+          : `<button class="btn btn-outline btn-sm"
+                onclick="queryStatus('${esc(evt.id)}')"
+                ${!evt._active || isRunning ? 'disabled' : ''}>积分</button>`;
 
         return `
           <div class="event-card ${evt._active ? '' : 'expired'}" id="card-${esc(evt.id)}">
@@ -395,9 +417,7 @@
               <button class="btn btn-primary btn-sm"
                 onclick="runSingle('${esc(evt.id)}')"
                 ${!evt._active || isRunning ? 'disabled' : ''}>运行</button>
-              <button class="btn btn-outline btn-sm"
-                onclick="queryStatus('${esc(evt.id)}')"
-                ${!evt._active || isRunning ? 'disabled' : ''}>积分</button>
+              ${statusBtn}
               <button class="btn btn-outline btn-sm"
                 onclick="removeEvent('${esc(evt.id)}')"
                 ${isRunning ? 'disabled' : ''}>删除</button>
@@ -412,6 +432,11 @@
       addLog('════════ 开始运行 ════════');
       const res = await ipcRenderer.invoke('run-event', eventId);
       showRunResult(res);
+      // Save checkInDays for card display
+      if (res.result && res.result.checkInDays !== undefined) {
+        const evt = events.find(e => e.id === eventId);
+        if (evt) { evt._checkInDays = res.result.checkInDays; renderEvents(); }
+      }
       addLog('════════ 运行结束 ════════');
       setRunning(false);
     }
@@ -465,6 +490,17 @@
       if (r.exchanged) {
         addLog('  奖励已兑换!', 'ok');
       }
+      if (r.checkInDays !== undefined && !r.error) {
+        addLog(`  打卡天数: ${r.checkInDays}`, 'ok');
+      }
+      if (r.claimed && r.claimed.length > 0) {
+        addLog(`  本次领取: ${r.claimed.length} 个里程碑奖励`, 'ok');
+        for (const m of r.claimed) {
+          addLog(`    - ${m.name}`, 'ok');
+        }
+      } else if (r.claimed && r.claimed.length === 0 && !r.error) {
+        addLog('  无可领取的里程碑奖励', 'warn');
+      }
     }
 
     async function doLogin() {
@@ -472,27 +508,54 @@
         addLog('请先添加一个活动配置', 'warn');
         return;
       }
-      const active = events.find(e => e._active);
-      const url = (active || events[0]).url;
+      const active = events.filter(e => e._active);
+      const all = active.length > 0 ? active : events;
+
+      // 按框架分组
+      const frameworkGroups = {};
+      for (const evt of all) {
+        const fw = evt.framework === 'milo' || evt.type === 'checkin' ? 'milo' : 'act';
+        if (!frameworkGroups[fw]) frameworkGroups[fw] = [];
+        frameworkGroups[fw].push(evt.url);
+      }
 
       showLoginModal();
-      addLog('正在打开浏览器进行 QQ 登录...');
-      const res = await ipcRenderer.invoke('login', url);
+      let hasError = false;
+      for (const [fw, urls] of Object.entries(frameworkGroups)) {
+        const fwLabel = fw === 'milo' ? 'Milo' : 'ACT';
+        addLog(`正在为 ${fwLabel} 框架打开浏览器登录...`);
+        const res = await ipcRenderer.invoke('login', urls[0], urls.slice(1), fw);
+        if (res.error) {
+          addLog(`${fwLabel} 登录失败: ${res.error}`, 'err');
+          hasError = true;
+        } else {
+          addLog(`${fwLabel} 登录成功!`, 'ok');
+        }
+      }
       closeLoginModal();
 
-      if (res.error) {
-        addLog('登录失败: ' + res.error, 'err');
-      } else {
-        addLog('QQ 登录成功! 登录状态已保存', 'ok');
+      if (!hasError) {
+        addLog('所有框架登录状态已保存', 'ok');
       }
-      // 登录完成后刷新登录状态
+      await checkLogin();
+    }
+
+    async function clearLogin() {
+      if (!confirm('确定要清空所有登录信息吗？\n（将删除 Cookie 和浏览器缓存，需要重新登录）')) return;
+      const res = await ipcRenderer.invoke('clear-login');
+      if (res.error) {
+        addLog('清空失败: ' + res.error, 'err');
+      } else {
+        addLog('登录信息已清空', 'ok');
+      }
       await checkLogin();
     }
 
     async function queryStatus(eventId) {
       setRunning(true);
       const evt = events.find(e => e.id === eventId);
-      addLog(`── 查询 ${evt ? evt.name : eventId} 积分 ──`);
+      const isCheckIn = evt && evt.type === 'checkin';
+      addLog(`── 查询 ${evt ? evt.name : eventId} ${isCheckIn ? '打卡天数' : '积分'} ──`);
 
       const res = await ipcRenderer.invoke('status', eventId);
 
@@ -504,6 +567,11 @@
           addLog('查询异常: ' + r.error, 'err');
         } else if (r.loggedIn === false) {
           addLog('未登录，请先点击 QQ 登录', 'warn');
+        } else if (isCheckIn && r.checkInDays !== undefined) {
+          // checkin 类型: 显示打卡天数
+          addLog(`当前打卡天数: ${r.checkInDays}`, 'ok');
+          evt._checkInDays = r.checkInDays;
+          renderEvents();
         } else if (r.score !== undefined) {
           addLog(`当前积分: ${r.score}`, 'ok');
           if (r.predictionScore !== undefined) {
@@ -552,7 +620,7 @@
     function setRunning(val) {
       isRunning = val;
       document.querySelectorAll('.btn').forEach(b => {
-        if (b.id === 'btn-login' || b.id === 'btn-run-all') b.disabled = val;
+        if (b.id === 'btn-login' || b.id === 'btn-run-all' || b.id === 'btn-logout') b.disabled = val;
       });
       renderEvents();
     }
