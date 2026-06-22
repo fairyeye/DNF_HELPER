@@ -13,13 +13,13 @@ let engine = null;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 960,
-    height: 750,
-    minWidth: 720,
-    minHeight: 550,
+    width: 1150,
+    height: 800,
+    minWidth: 800,
+    minHeight: 480,
+    frame: false,
     title: 'DNF 活动助手',
-    backgroundColor: '#0d0d1a',
-    autoHideMenuBar: true,
+    backgroundColor: '#0e0e0e',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -62,6 +62,13 @@ function copyResourceEvents() {
 }
 
 async function initEngine() {
+  if (engine) {
+    // 引擎已加载，直接通知渲染进程
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('engine-ready', { success: true });
+    }
+    return;
+  }
   const enginePath = getEnginePath();
   if (!enginePath) {
     console.error('找不到 bot_core.mjs');
@@ -306,8 +313,26 @@ function setupIPC() {
     }
   });
 
-  // ---------- 窗口控制 ----------
+  // ---------- 渲染进程就绪握手 ----------
+  // 渲染进程注册完所有 listener 后才发 renderer-ready，
+  // 避免 engine-ready 事件在 listener 注册前发出导致卡死在加载画面
+  ipcMain.handle('renderer-ready', async () => {
+    await initEngine();
+    return { ok: true };
+  });
+
+  // 备用：渲染进程主动请求重新初始化引擎
+  ipcMain.handle('init-engine', async () => {
+    await initEngine();
+    return { ok: true };
+  });
+
+  // ---------- 窗口控制（自定义标题栏） ----------
   ipcMain.handle('window-minimize', () => mainWindow?.minimize());
+  ipcMain.handle('window-maximize', () => {
+    if (mainWindow?.isMaximized()) mainWindow.unmaximize();
+    else mainWindow?.maximize();
+  });
   ipcMain.handle('window-close', () => mainWindow?.close());
 }
 
@@ -318,7 +343,8 @@ function setupIPC() {
 app.whenReady().then(async () => {
   createWindow();
   setupIPC();
-  await initEngine();
+  // initEngine() 不再在这里调用，改为等渲染进程发 renderer-ready 后触发
+  // 避免 engine-ready 事件在渲染进程 listener 注册前发出
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

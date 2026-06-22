@@ -178,6 +178,15 @@ export function log(msg) {
   fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
   const line = `[${ts()}] ${msg}`;
   console.log(line);
+  // 日志轮转: 超过 5MB 时截断保留最后 1MB
+  try {
+    if (fs.existsSync(LOG_FILE) && fs.statSync(LOG_FILE).size > 5 * 1024 * 1024) {
+      const buf = fs.readFileSync(LOG_FILE, 'utf-8');
+      const keepFrom = Math.max(0, buf.length - 1024 * 1024);
+      const nlIdx = buf.indexOf('\n', keepFrom);
+      fs.writeFileSync(LOG_FILE, buf.slice(nlIdx >= 0 ? nlIdx + 1 : keepFrom), 'utf-8');
+    }
+  } catch { /* 轮转失败静默 */ }
   fs.appendFileSync(LOG_FILE, line + '\n', 'utf-8');
   if (_logCallback) _logCallback(msg);
 }
@@ -306,7 +315,7 @@ export async function navigateToPage(browser, url, framework = 'act') {
 
   await page.setUserAgent(
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
-    'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36'
+    'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36'
   );
 
   log('正在打开活动页面...');
@@ -1269,11 +1278,13 @@ export async function runClaim(config) {
 
     // Step 3: 领取每日任务
     log('[Step 3] 领取每日任务积分...');
-    const daily = await claimTaskGroup(page, config.dailyTasks, '每日任务');
+    const daily = config.dailyTasks && config.dailyTasks.length > 0
+      ? await claimTaskGroup(page, config.dailyTasks, '每日任务')
+      : { success: 0, skip: 0, fail: 0 };
 
     // Step 4: 领取每周任务
     log('[Step 4] 领取每周任务积分...');
-    const weekly = config.weeklyTasks.length > 0
+    const weekly = config.weeklyTasks && config.weeklyTasks.length > 0
       ? await claimTaskGroup(page, config.weeklyTasks, '每周任务')
       : { success: 0, skip: 0, fail: 0 };
 
