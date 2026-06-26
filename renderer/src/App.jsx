@@ -38,7 +38,7 @@ export default function App() {
 
   // ── Refresh events ──
   const refreshEvents = useCallback(() => {
-    invoke('list-events').then(list => {
+    return invoke('list-events').then(list => {
       setEvents(list);
       return list;
     }).catch(err => {
@@ -278,7 +278,7 @@ export default function App() {
 
   return (
     <div className="app-root">
-      <Loading active={loading} />
+      {loading && <div className="loading-overlay"><Loading active={true} /></div>}
 
       <Titlebar />
 

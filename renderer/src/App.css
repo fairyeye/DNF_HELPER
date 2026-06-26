@@ -15,9 +15,19 @@ body {
   overflow: hidden;
 }
 
+/* ==================== Loading Overlay ==================== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ==================== Custom Titlebar ==================== */
 .titlebar {
-  height: 32px;
+  height: 36px;
   background: #e8e2d0;
   display: flex;
   align-items: center;
@@ -34,11 +44,13 @@ body {
 }
 .titlebar-btns {
   display: flex;
+  gap: 2px;
+  padding-right: 6px;
   -webkit-app-region: no-drag;
 }
 .tb-btn {
-  width: 46px;
-  height: 32px;
+  width: 32px;
+  height: 26px;
   border: none;
   background: transparent;
   color: #9f927d;
@@ -46,10 +58,19 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.15s;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
-.tb-btn:hover { background: rgba(114, 93, 66, 0.1); }
-.tb-btn.close:hover { background: #e05a5a; color: #fff; }
+.tb-btn:hover {
+  background: rgba(114, 93, 66, 0.12);
+  color: #725d42;
+  transform: scale(1.1);
+}
+.tb-btn.close:hover {
+  background: #e05a5a;
+  color: #fff;
+  transform: scale(1.1);
+}
 
 /* ==================== Header ==================== */
 .app-header {
