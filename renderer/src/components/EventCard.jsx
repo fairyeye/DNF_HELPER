@@ -22,8 +22,6 @@ export default function EventCard({ evt, isRunning, onRun, onQuery, onRemove, on
   const oPts = taskPoints(evt.oneTimeTasks);
   const reward = rewardText(evt.targetReward);
 
-  const cardColor = isActive ? 'app-teal' : 'brown';
-
   let infoLines = [];
   if (isCheckIn) {
     const msArr = evt.milestones || [];
@@ -47,10 +45,10 @@ export default function EventCard({ evt, isRunning, onRun, onQuery, onRemove, on
 
   return (
     <div className={'event-card-wrapper' + (isActive ? '' : ' expired')}>
-      <Card color={cardColor}>
+      <Card>
         <div className="event-card-inner">
           <div className="event-card-top">
-            <Title size="small" color={isActive ? 'app-teal' : 'brown'}>{evt.name}</Title>
+            <Title size="small">{evt.name}</Title>
             <span className={'card-status-tag' + (isActive ? ' active' : '')}>
               {isActive ? '进行中' : '已过期'}
             </span>
@@ -64,7 +62,7 @@ export default function EventCard({ evt, isRunning, onRun, onQuery, onRemove, on
             ))}
           </div>
 
-          <Divider type="dashed-brown" />
+          <Divider type="dashed-teal" />
 
           <div className="event-card-progress">
             <div className="progress-track">

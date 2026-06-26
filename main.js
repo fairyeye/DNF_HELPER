@@ -19,7 +19,7 @@ function createWindow() {
     minHeight: 480,
     frame: false,
     title: 'DNF 活动助手',
-    backgroundColor: '#f8f8f0',
+    backgroundColor: '#0f0f23',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,

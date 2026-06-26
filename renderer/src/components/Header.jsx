@@ -31,7 +31,7 @@ export default function Header({
   return (
     <div className="app-header">
       <div className="header-left">
-        <Title size="middle" color="app-teal">控制中心</Title>
+        <Title size="middle">控制中心</Title>
         <span className="version-tag">TX Helper v1.0</span>
         <span className={statusCls}>{statusText}</span>
       </div>
