@@ -38,8 +38,8 @@
     "asar": false,
     "files": [
       "main.js",
-      "index.html",
       "bot_core.mjs",
+      "renderer-dist/**/*",
       "package.json"
     ],
     "extraResources": [

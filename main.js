@@ -19,7 +19,7 @@ function createWindow() {
     minHeight: 480,
     frame: false,
     title: 'DNF 活动助手',
-    backgroundColor: '#0e0e0e',
+    backgroundColor: '#f8f8f0',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -27,11 +27,30 @@ function createWindow() {
     },
   });
 
-  mainWindow.loadFile('index.html');
+  mainWindow.loadFile(path.join(__dirname, 'renderer-dist', 'index.html'));
 
   // 开发时自动打开 DevTools
   // mainWindow.webContents.openDevTools();
+
+  // 调试：捕获渲染进程 console 输出
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    const levels = ['LOG', 'WARN', 'ERR'];
+    console.log(`[renderer ${levels[level] || 'LOG'}] ${message}`);
+  });
+
+  // 调试：捕获渲染进程崩溃
+  mainWindow.webContents.on('crashed', () => {
+    console.error('[RENDERER CRASHED]');
+  });
+
+  mainWindow.on('closed', () => {
+    console.log('[WINDOW CLOSED]');
+  });
 }
+
+app.on('render-process-gone', (event, webContents, details) => {
+  console.error('[RENDER PROCESS GONE]', JSON.stringify(details));
+});
 
 // ================================================================
 //                        引擎加载
