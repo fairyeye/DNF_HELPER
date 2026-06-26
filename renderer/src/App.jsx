@@ -24,9 +24,10 @@ export default function App() {
   const [logExpanded, setLogExpanded] = useState(true);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState(null);
-  const [headerStatus, setHeaderStatus] = useState('待命');
   const eventsRef = useRef(events);
   eventsRef.current = events;
+  const loginCancelRef = useRef(false);
+  const checkInDaysRef = useRef({});
 
   // ── Log helper ──
   const addLog = useCallback((msg, cls) => {
@@ -39,8 +40,13 @@ export default function App() {
   // ── Refresh events ──
   const refreshEvents = useCallback(() => {
     return invoke('list-events').then(list => {
-      setEvents(list);
-      return list;
+      const merged = list.map(e =>
+        checkInDaysRef.current[e.id] !== undefined
+          ? { ...e, _checkInDays: checkInDaysRef.current[e.id] }
+          : e
+      );
+      setEvents(merged);
+      return merged;
     }).catch(err => {
       addLog('加载活动列表失败: ' + err.message, 'err');
       return [];
@@ -91,12 +97,12 @@ export default function App() {
   // ── Run single event ──
   const runSingle = useCallback((eventId) => {
     setIsRunning(true);
-    setHeaderStatus('执行中...');
     addLog('════════ 开始运行 ════════');
     invoke('run-event', eventId).then(res => {
       if (res.error) { addLog('执行失败: ' + res.error, 'err'); return; }
       showRunResult(res);
       if (res.result && res.result.checkInDays !== undefined) {
+        checkInDaysRef.current[eventId] = res.result.checkInDays;
         setEvents(prev => prev.map(e =>
           e.id === eventId ? { ...e, _checkInDays: res.result.checkInDays } : e
         ));
@@ -104,14 +110,12 @@ export default function App() {
       addLog('════════ 运行结束 ════════');
     }).finally(() => {
       setIsRunning(false);
-      setHeaderStatus('待命');
     });
   }, [addLog]);
 
   // ── Run all ──
   const runAll = useCallback(() => {
     setIsRunning(true);
-    setHeaderStatus('执行中...');
     addLog('════════ 一键运行全部活动 ════════');
     invoke('run-all').then(res => {
       if (res.error) { addLog('错误: ' + res.error, 'err'); return; }
@@ -123,7 +127,6 @@ export default function App() {
       addLog('════════ 全部完成 ════════');
     }).finally(() => {
       setIsRunning(false);
-      setHeaderStatus('待命');
     });
   }, [addLog]);
 
@@ -161,12 +164,18 @@ export default function App() {
       groups[fw].push(evt.url);
     }
 
+    loginCancelRef.current = false;
     setLoginModalOpen(true);
     let hasError = false;
     const keys = Object.keys(groups);
     let idx = 0;
 
     function loginNext() {
+      if (loginCancelRef.current) {
+        setLoginModalOpen(false);
+        addLog('登录已取消', 'warn');
+        return;
+      }
       if (idx >= keys.length) {
         setLoginModalOpen(false);
         if (!hasError) addLog('所有框架登录状态已保存', 'ok');
@@ -203,7 +212,6 @@ export default function App() {
   // ── Query status ──
   const queryStatus = useCallback((eventId) => {
     setIsRunning(true);
-    setHeaderStatus('执行中...');
     const evt = eventsRef.current.find(e => e.id === eventId);
     const isCheckIn = evt && evt.type === 'checkin';
     addLog('── 查询 ' + (evt ? evt.name : eventId) + ' ' + (isCheckIn ? '打卡天数' : '积分') + ' ──');
@@ -215,6 +223,7 @@ export default function App() {
       else if (r.loggedIn === false) addLog('未登录，请先点击 QQ登录', 'warn');
       else if (isCheckIn && r.checkInDays !== undefined) {
         addLog('当前打卡天数: ' + r.checkInDays, 'ok');
+        checkInDaysRef.current[eventId] = r.checkInDays;
         setEvents(prev => prev.map(e =>
           e.id === eventId ? { ...e, _checkInDays: r.checkInDays } : e
         ));
@@ -228,7 +237,6 @@ export default function App() {
       }
     }).finally(() => {
       setIsRunning(false);
-      setHeaderStatus('待命');
     });
   }, [addLog]);
 
@@ -283,7 +291,6 @@ export default function App() {
       <Titlebar />
 
       <Header
-        headerStatus={headerStatus}
         loginStatus={loginStatus}
         isRunning={isRunning}
         onLogin={doLogin}
@@ -309,7 +316,7 @@ export default function App() {
         onClear={() => setLogLines([])}
       />
 
-      <LoginModal open={loginModalOpen} onClose={() => setLoginModalOpen(false)} />
+      <LoginModal open={loginModalOpen} onClose={() => { loginCancelRef.current = true; }} />
 
       <Modal
         open={!!confirmDialog}

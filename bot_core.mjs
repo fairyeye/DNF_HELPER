@@ -1254,7 +1254,7 @@ export async function runClaim(config) {
     if (!isLoggedIn) {
       log('登录态已失效! 请先点击 QQ 登录重新登录');
       await browser.close();
-      return { error: '登录态已失效', daily: { success: 0, skip: 0, fail: 0 }, weekly: { success: 0, skip: 0, fail: 0 } };
+      return { error: '登录态已失效', daily: { success: 0, skip: 0, fail: 0 }, weekly: { success: 0, skip: 0, fail: 0 }, oneTime: { success: 0, skip: 0, fail: 0 } };
     }
     log('登录状态正常');
 
@@ -1288,6 +1288,12 @@ export async function runClaim(config) {
       ? await claimTaskGroup(page, config.weeklyTasks, '每周任务')
       : { success: 0, skip: 0, fail: 0 };
 
+    // Step 4b: 领取一次性任务积分
+    log('[Step 4b] 领取一次性任务积分...');
+    const oneTime = config.oneTimeTasks && config.oneTimeTasks.length > 0
+      ? await claimTaskGroup(page, config.oneTimeTasks, '一次性任务')
+      : { success: 0, skip: 0, fail: 0 };
+
     // Step 5: 刷新数据 & 尝试兑换
     log('[Step 5] 检查积分兑换...');
     await refreshData(page, config.refreshToken);
@@ -1302,6 +1308,7 @@ export async function runClaim(config) {
     log('执行完毕!');
     log(`  每日任务: 成功${daily.success} 跳过${daily.skip} 失败${daily.fail}`);
     log(`  每周任务: 成功${weekly.success} 跳过${weekly.skip} 失败${weekly.fail}`);
+    log(`  一次性任务: 成功${oneTime.success} 跳过${oneTime.skip} 失败${oneTime.fail}`);
     log(`  积分兑换: ${exchanged ? '已兑换 ' + config.targetReward.name : '积分不足'}`);
     log(`  当前积分: ${finalScore.score}`);
     logSep();
@@ -1309,13 +1316,13 @@ export async function runClaim(config) {
     await sleep(500);
     await browser.close();
 
-    return { daily, weekly, exchanged, score: finalScore.score };
+    return { daily, weekly, oneTime, exchanged, score: finalScore.score };
 
   } catch (e) {
     log(`脚本执行异常: ${e.message}`);
     if (e.stack) log(e.stack.split('\n').slice(0, 3).join('\n'));
     if (browser) await browser.close().catch(() => {});
-    return { error: e.message, daily: { success: 0, skip: 0, fail: 0 }, weekly: { success: 0, skip: 0, fail: 0 } };
+    return { error: e.message, daily: { success: 0, skip: 0, fail: 0 }, weekly: { success: 0, skip: 0, fail: 0 }, oneTime: { success: 0, skip: 0, fail: 0 } };
   }
 }
 
@@ -1427,27 +1434,4 @@ export async function runCheckInClaim(config) {
     if (browser) await browser.close().catch(() => {});
     return { error: e.message, checkInDays: 0, claimed: [] };
   }
-}
-
-/**
- * 批量运行所有活跃事件
- */
-export async function runAll(events) {
-  const results = {};
-  for (const config of events) {
-    log(`\n>>> 开始处理: ${config.name}`);
-    try {
-      if (config.type === 'checkin') {
-        results[config.id] = await runCheckInClaim(config);
-      } else if (config.framework === 'milo') {
-        results[config.id] = await runClaimMilo(config);
-      } else {
-        results[config.id] = await runClaim(config);
-      }
-    } catch (e) {
-      log(`处理 ${config.name} 失败: ${e.message}`);
-      results[config.id] = { error: e.message };
-    }
-  }
-  return results;
 }

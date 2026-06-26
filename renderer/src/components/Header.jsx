@@ -2,7 +2,6 @@ import React from 'react';
 import { Button, Title } from 'animal-island-ui';
 
 export default function Header({
-  headerStatus,
   loginStatus,
   isRunning,
   onLogin,
@@ -15,7 +14,7 @@ export default function Header({
   const loggedInAny = frameworks.some(k => loginStatus[k]);
   const loggedInParts = frameworks.filter(k => loginStatus[k]).map(k => k === 'milo' ? 'Milo' : 'ACT');
 
-  let statusText = headerStatus;
+  let statusText = '待命';
   let statusCls = 'status-tag';
   if (isRunning) {
     statusText = '执行中...';

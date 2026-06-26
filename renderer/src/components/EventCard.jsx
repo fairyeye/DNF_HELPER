@@ -74,14 +74,18 @@ export default function EventCard({ evt, isRunning, onRun, onQuery, onRemove, on
           </div>
 
           <div className="event-card-actions">
-            <Button
-              type={isActive ? 'primary' : 'default'}
-              size="small"
-              disabled={disabled}
-              onClick={() => onRun(evt.id)}
-            >
-              {isActive ? '▶ 运行' : '▶ 重新运行'}
-            </Button>
+            {isActive ? (
+              <Button
+                type="primary"
+                size="small"
+                disabled={isRunning}
+                onClick={() => onRun(evt.id)}
+              >
+                ▶ 运行
+              </Button>
+            ) : (
+              <span className="expired-tag">已结束</span>
+            )}
             <Button size="small" ghost disabled={!evt.url} onClick={() => onOpenUrl(evt.id)}>
               打开
             </Button>

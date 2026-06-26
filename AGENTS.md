@@ -6,16 +6,20 @@
 
 ```
 dnf_gui/
-├── main.js          # Electron 主进程（IPC 通信、引擎加载）
-├── index.html       # 渲染进程（界面、交互逻辑）
-├── bot_core.mjs     # 核心引擎（Puppeteer 自动化、登录检测、任务领取）
-├── events/          # 活动配置 JSON
-├── package.json     # 依赖 + electron-builder 打包配置
-├── build.bat        # 构建脚本
-└── AGENTS.md        # 本文件
+├── main.js              # Electron 主进程（IPC 通信、引擎加载）
+├── bot_core.mjs         # 核心引擎（Puppeteer 自动化、登录检测、任务领取）
+├── renderer/            # React + Vite 前端源码
+│   ├── index.html       # Vite 入口 HTML
+│   └── src/             # React 组件（App.jsx, components/...）
+├── renderer-dist/       # Vite 构建产物（main.js 加载此目录）
+├── events/              # 活动配置 JSON
+├── package.json         # 依赖 + electron-builder 打包配置
+├── build.bat            # 构建脚本
+└── AGENTS.md            # 本文件
 ```
 
-- 引擎（bot_core.mjs）和界面（main.js + index.html）在同一个目录下
+- 引擎（bot_core.mjs）和主进程（main.js）在根目录，前端构建产物在 renderer-dist/
+- main.js 通过 `loadFile` 加载 `renderer-dist/index.html`
 - GUI 通过 `import()` 加载 `__dirname/bot_core.mjs`
 - 打包时 `build.files` 包含 `bot_core.mjs`，`build.extraResources` 把 `events/` 复制到 `resources/events`
 
